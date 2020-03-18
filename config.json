@@ -1,0 +1,7 @@
+{
+  "brokers": [
+    "127.0.0.1:9092"
+  ],
+  "topic": "flow-messages",
+  "timeout": 10
+}
