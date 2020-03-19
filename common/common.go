@@ -18,9 +18,10 @@ const (
 var MQCfg mqCfg
 
 type mqCfg struct {
-	Brokers []string `json:"brokers"`
-	Topic   string   `json:"topic"`
-	Timeout uint8    `json:"timeout"`
+	Brokers      []string `json:"brokers"`
+	Topic        string   `json:"topic"`
+	Timeout      uint8    `json:"timeout"`
+	ExporterPort uint32   `json:"exporter_port"`
 }
 
 func init() {

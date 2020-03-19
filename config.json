@@ -3,5 +3,6 @@
     "127.0.0.1:9092"
   ],
   "topic": "flow-messages",
-  "timeout": 10
+  "timeout": 10,
+  "exporter_port": 30060
 }
