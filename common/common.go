@@ -5,16 +5,21 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+
+	"github.com/sirupsen/logrus"
 )
 
 const (
-	// ErrRC return code for error
+	// ErrRC error out return code
 	ErrRC = 1
 	// Partition default consuming partition
 	Partition = 0
 )
 
-// MQCfg message queue configuration, kafka is the only supported option now
+// Logger global logger
+var Logger *logrus.Logger
+
+// MQCfg message queue configuration, kafka is the only supported system
 var MQCfg mqCfg
 
 type mqCfg struct {
@@ -25,36 +30,57 @@ type mqCfg struct {
 }
 
 func init() {
-	getOptions()
+	Logger = initLogger()
+	MQCfg = getOptions()
+}
+
+func initLogger() *logrus.Logger {
+	level := logrus.InfoLevel
+
+	v, ok := os.LookupEnv("DEBUG")
+	if ok {
+		if v == "True" || v == "true" {
+			level = logrus.DebugLevel
+		}
+	}
+
+	formatter := logrus.TextFormatter{
+		DisableColors: true,
+		FullTimestamp: true,
+	}
+	logger := logrus.New()
+	logger.SetFormatter(&formatter)
+	logger.Out = os.Stdout
+	logger.SetLevel(level)
+
+	return logger
 }
 
 // InitCfg get configuration options
-func initCfg(path string) {
+func parseCfg(path string, cfg *mqCfg) {
 	f, err := os.Open(path)
 	if err != nil {
-		fmt.Printf("Fail to open configure file %s: %s", path, err.Error())
-		os.Exit(ErrRC)
+		Logger.Fatalf("Fail to open configure file %s: %s", path, err.Error())
 	}
 
 	bytes, err := ioutil.ReadAll(f)
 	if err != nil {
-		fmt.Printf("Fail to read configure file %s: %s", path, err.Error())
-		os.Exit(ErrRC)
+		Logger.Fatalf("Fail to read configure file %s: %s", path, err.Error())
 	}
 
-	err = json.Unmarshal(bytes, &MQCfg)
+	err = json.Unmarshal(bytes, cfg)
 	if err != nil {
-		fmt.Printf("Configure file %s is not a valid json file", path)
-		os.Exit(ErrRC)
+		Logger.Fatalf("Configure file %s is not a valid json file", path)
 	}
 }
 
 func getHelp() {
-	fmt.Printf("Usage: %s <-c|--config> <config file name>.json\n", os.Args[0])
-	os.Exit(ErrRC)
+	ErrExit(fmt.Sprintf("Usage: %s <-c|--config> <config file name>.json", os.Args[0]))
 }
 
-func getOptions() {
+func getOptions() mqCfg {
+	var cfg mqCfg
+
 	switch n := len(os.Args); n {
 	case 2:
 		if os.Args[1] != "-h" && os.Args[1] != "--help" {
@@ -64,11 +90,12 @@ func getOptions() {
 		if os.Args[1] != "-c" && os.Args[1] != "--config" {
 			getHelp()
 		}
-		initCfg(os.Args[2])
+		parseCfg(os.Args[2], &cfg)
 	default:
 		getHelp()
 	}
 
+	return cfg
 }
 
 // ErrExit exit the execution

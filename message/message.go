@@ -2,7 +2,6 @@ package message
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"time"
 
@@ -42,9 +41,10 @@ type FlowRecord struct {
 // decodeMsg decode kafka message into sflow message
 func decodeMsg(msg *kafka.ConsumerMessage) (*flow.FlowMessage, error) {
 	var fmsg flow.FlowMessage
+	common.Logger.Debugf("Decode Kafka message into sflow message: %+v", msg)
 	err := proto.Unmarshal(msg.Value, &fmsg)
 	if err != nil {
-		log.Printf("Fail to decode flow message, ignore this record")
+		common.Logger.Error("Fail to decode sflow message")
 		return nil, err
 	}
 
@@ -53,6 +53,7 @@ func decodeMsg(msg *kafka.ConsumerMessage) (*flow.FlowMessage, error) {
 
 // extractRecord format sflow message into human readable structure
 func extractRecord(fmsg *flow.FlowMessage) *FlowRecord {
+	common.Logger.Debugf("Extract sflow message into sflow record: %+v", fmsg)
 	// Refer to https://sflow.org/sflow_version_5.txt for detailed field meaning
 	record := FlowRecord{
 		Type:         fmsg.Type.String(),
@@ -86,6 +87,7 @@ func getConsumer(brokers []string, topic string) kafka.PartitionConsumer {
 	config := kafka.NewConfig()
 	config.Net.KeepAlive = time.Duration(common.MQCfg.Timeout) * time.Second
 
+	common.Logger.Debugf("Connect to Kafka brokers %v", brokers)
 	master, err := kafka.NewConsumer(brokers, config)
 	if err != nil {
 		common.ErrExit(fmt.Sprintf("Fail to make connection to brokers %v: %s", brokers, err.Error()))
@@ -95,6 +97,7 @@ func getConsumer(brokers []string, topic string) kafka.PartitionConsumer {
 	if err != nil {
 		common.ErrExit(fmt.Sprintf("Fail to list topics: %s", err.Error()))
 	}
+	common.Logger.Debugf("Find Kafka topics: %v", topics)
 
 	existed := false
 	for _, t := range topics {
@@ -107,6 +110,7 @@ func getConsumer(brokers []string, topic string) kafka.PartitionConsumer {
 		common.ErrExit(fmt.Sprintf("Fail to find topic %s", topic))
 	}
 
+	common.Logger.Debugf("Create consumer for topic %s with parition %d", topic, common.Partition)
 	consumer, err := master.ConsumePartition(topic, common.Partition, kafka.OffsetNewest)
 	if err != nil {
 		common.ErrExit(fmt.Sprintf("Fail to create consumer for topic %s with partition %d: %s", common.MQCfg.Topic, common.Partition, err.Error()))
@@ -130,19 +134,20 @@ func GetRecords(brokers []string, topic string) (<-chan *FlowRecord, <-chan *kaf
 				if ok {
 					fmsg, err := decodeMsg(msg)
 					if err != nil {
-						log.Printf("Hit an error while decoding sflow message: %s", err.Error())
-						log.Println("Ignore this record silently")
+						common.Logger.Error(err)
+						common.Logger.Warn("Ignore this sflow message silently")
 					} else {
 						record := extractRecord(fmsg)
+						common.Logger.Debugf("Get sflow record: %+v", record)
 						fc <- record
 					}
 				} else {
-					log.Println("Kafka topic has been closed, exit")
+					common.Logger.Error("Kafka hit an internal error")
 					close(fc)
 					return
 				}
 				// default:
-				//   log.Printf("No record is gotten within %d seconds, sleep and retry", common.MQCfg.Timeout)
+				//   common.Logger.Infof("No record is gotten within %d seconds, sleep and retry", common.MQCfg.Timeout)
 				//   time.Sleep(time.Duration(common.MQCfg.Timeout) * time.Second)
 			}
 		}

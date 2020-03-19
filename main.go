@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -27,20 +26,19 @@ func main() {
 			case record, ok := <-fc:
 				if ok {
 					go func(r *message.FlowRecord) {
-						log.Printf("Get metric: %+v", record)
 						metric.UpdateMetric(record)
 					}(record)
 				} else {
-					common.ErrExit("Kafka hits an error, exit")
+					common.ErrExit("Kafka hits an internal error")
 				}
 			case err, ok := <-ec:
 				if ok {
 					if err != nil {
-						log.Printf("Topic %s partition %d err: %s", cfg.Topic, common.Partition, err.Error())
-						break
+						common.Logger.Errorf("Get an error on topic %s with partition %d: %s", cfg.Topic, common.Partition, err.Error())
+						common.Logger.Warn("Ignore the error")
 					}
 				} else {
-					common.ErrExit("Kafka hits an error, exit")
+					common.ErrExit("Kafka hits an internal error")
 				}
 			case <-sc:
 				common.ErrExit("Terminate the execution")
@@ -49,7 +47,10 @@ func main() {
 	}()
 
 	http.Handle("/metrics", promhttp.Handler())
-	log.Printf("Access http://localhost:%d/metrics for metrics", cfg.ExporterPort)
+
+	common.Logger.Infof("Access http://localhost:%d/metrics for metrics", cfg.ExporterPort)
+	common.Logger.Info("To view more detailed output: export DEBUG=true")
+
 	err := http.ListenAndServe(fmt.Sprintf(":%d", cfg.ExporterPort), nil)
 	if err != nil {
 		common.ErrExit(fmt.Sprintf("Fail to start HTTP server: %s", err.Error()))

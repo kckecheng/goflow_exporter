@@ -3,6 +3,7 @@ package metric
 import (
 	"fmt"
 
+	"github.com/kckecheng/goflow_exporter/common"
 	"github.com/kckecheng/goflow_exporter/message"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -18,11 +19,13 @@ var sflowMetric = prometheus.NewGaugeVec(
 )
 
 func init() {
+	common.Logger.Info("Register prometheus metric: sflow_bytes")
 	prometheus.MustRegister(sflowMetric)
 }
 
 // UpdateMetric update metric
 func UpdateMetric(r *message.FlowRecord) {
+	common.Logger.Debugf("Update metric with sflow record: %+v", r)
 	sflowMetric.With(prometheus.Labels{
 		"recevived_at": r.TimeRecvd.String(),
 		"sample_rate":  fmt.Sprintf("%d", r.SamplingRate),
