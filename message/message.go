@@ -12,6 +12,8 @@ import (
 	proto "github.com/golang/protobuf/proto"
 )
 
+const partition = 0
+
 // FlowRecord human readable representation for sflow message
 type FlowRecord struct {
 	Type          string
@@ -85,7 +87,7 @@ func extractRecord(fmsg *flow.FlowMessage) *FlowRecord {
 // getConsumer connect to Kafka brokers and return a consumer for a specified topic
 func getConsumer(brokers []string, topic string) kafka.PartitionConsumer {
 	config := kafka.NewConfig()
-	config.Net.KeepAlive = time.Duration(common.MQCfg.Timeout) * time.Second
+	config.Net.KeepAlive = 10 * time.Second
 
 	common.Logger.Debugf("Connect to Kafka brokers %v", brokers)
 	master, err := kafka.NewConsumer(brokers, config)
@@ -110,10 +112,10 @@ func getConsumer(brokers []string, topic string) kafka.PartitionConsumer {
 		common.ErrExit(fmt.Sprintf("Fail to find topic %s", topic))
 	}
 
-	common.Logger.Debugf("Create consumer for topic %s with parition %d", topic, common.Partition)
-	consumer, err := master.ConsumePartition(topic, common.Partition, kafka.OffsetNewest)
+	common.Logger.Debugf("Create consumer for topic %s with parition %d", topic, partition)
+	consumer, err := master.ConsumePartition(topic, partition, kafka.OffsetNewest)
 	if err != nil {
-		common.ErrExit(fmt.Sprintf("Fail to create consumer for topic %s with partition %d: %s", common.MQCfg.Topic, common.Partition, err.Error()))
+		common.ErrExit(fmt.Sprintf("Fail to create consumer for topic %s with partition %d: %s", common.MQCfg.Topic, partition, err.Error()))
 	}
 
 	return consumer

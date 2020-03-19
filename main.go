@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/kckecheng/goflow_exporter/common"
 	"github.com/kckecheng/goflow_exporter/message"
@@ -14,15 +15,36 @@ import (
 )
 
 func main() {
+	cfg := common.MQCfg
+
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGTERM, syscall.SIGHUP)
-
-	cfg := common.MQCfg
+	ticker := time.NewTicker(time.Duration(cfg.Timeout) * time.Second)
+	go func() {
+		for {
+			select {
+			case <-sc:
+				common.ErrExit("Terminate the execution")
+			case <-ticker.C:
+				common.Logger.Debugf("Reset previous metric values after expiration(%d seconds)", cfg.Timeout)
+				metric.Reset()
+			}
+		}
+	}()
 
 	fc, ec := message.GetRecords(cfg.Brokers, cfg.Topic)
 	go func() {
 		for {
 			select {
+			case err, ok := <-ec:
+				if ok {
+					if err != nil {
+						common.Logger.Errorf("Hit an error while processing topic %s: %s", cfg.Topic, err.Error())
+						common.Logger.Warn("Ignore the error")
+					}
+				} else {
+					common.ErrExit("Kafka hits an internal error")
+				}
 			case record, ok := <-fc:
 				if ok {
 					go func(r *message.FlowRecord) {
@@ -31,17 +53,6 @@ func main() {
 				} else {
 					common.ErrExit("Kafka hits an internal error")
 				}
-			case err, ok := <-ec:
-				if ok {
-					if err != nil {
-						common.Logger.Errorf("Get an error on topic %s with partition %d: %s", cfg.Topic, common.Partition, err.Error())
-						common.Logger.Warn("Ignore the error")
-					}
-				} else {
-					common.ErrExit("Kafka hits an internal error")
-				}
-			case <-sc:
-				common.ErrExit("Terminate the execution")
 			}
 		}
 	}()

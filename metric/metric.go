@@ -39,3 +39,8 @@ func UpdateMetric(r *message.FlowRecord) {
 		"l4_proto":     fmt.Sprintf("%d", r.Proto),
 	}).Set(float64(r.Bytes))
 }
+
+// Reset clear previous metric instance values
+func Reset() {
+	sflowMetric.Reset()
+}
