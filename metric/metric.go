@@ -15,11 +15,19 @@ var sflowMetric = prometheus.NewGaugeVec(
 		Name: "sflow_bytes",
 		Help: "sFlow traffic",
 	},
-	[]string{"recevived_at", "sample_rate", "src_ip", "dst_ip", "src_if", "dst_if", "src_port", "dst_port", "l3_proto", "l4_proto"},
+	[]string{"recevived_at", "sample_rate", "src_ip", "dst_ip", "src_if", "dst_if", "src_port", "dst_port", "l3_proto", "l4_proto", "round"},
+)
+
+var sflowRound = prometheus.NewGauge(
+	prometheus.GaugeOpts{
+		Name: "sflow_round",
+		Help: "Current round of collection",
+	},
 )
 
 func init() {
 	common.Logger.Info("Register prometheus metric: sflow_bytes")
+	prometheus.MustRegister(sflowRound)
 	prometheus.MustRegister(sflowMetric)
 }
 
@@ -37,10 +45,15 @@ func UpdateMetric(r *message.FlowRecord) {
 		"dst_port":     fmt.Sprintf("%d", r.DstPort),
 		"l3_proto":     fmt.Sprintf("%d", r.Etype),
 		"l4_proto":     fmt.Sprintf("%d", r.Proto),
+		"round":        fmt.Sprintf("%d", common.Round),
 	}).Set(float64(r.Bytes))
 }
 
 // Reset clear previous metric instance values
 func Reset() {
+	common.Logger.Debugf("Round of collection: %d", common.Round)
+	sflowRound.Set(float64(common.Round))
+
+	common.Logger.Debugf("Reset previous metric values after expiration(%d seconds)", common.RuntimeCfg.Timeout)
 	sflowMetric.Reset()
 }

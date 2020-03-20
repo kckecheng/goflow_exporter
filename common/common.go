@@ -16,13 +16,16 @@ const (
 	Partition = 0
 )
 
+// Round round of metric collections
+var Round = 0
+
 // Logger global logger
 var Logger *logrus.Logger
 
-// MQCfg message queue configuration, kafka is the only supported system
-var MQCfg mqCfg
+// RuntimeCfg runtime configuration
+var RuntimeCfg runtimeCfg
 
-type mqCfg struct {
+type runtimeCfg struct {
 	Brokers      []string `json:"brokers"`
 	Topic        string   `json:"topic"`
 	Timeout      uint8    `json:"timeout"`
@@ -31,7 +34,7 @@ type mqCfg struct {
 
 func init() {
 	Logger = initLogger()
-	MQCfg = getOptions()
+	RuntimeCfg = getOptions()
 }
 
 func initLogger() *logrus.Logger {
@@ -57,7 +60,7 @@ func initLogger() *logrus.Logger {
 }
 
 // InitCfg get configuration options
-func parseCfg(path string, cfg *mqCfg) {
+func parseCfg(path string, cfg *runtimeCfg) {
 	f, err := os.Open(path)
 	if err != nil {
 		Logger.Fatalf("Fail to open configure file %s: %s", path, err.Error())
@@ -78,8 +81,8 @@ func getHelp() {
 	ErrExit(fmt.Sprintf("Usage: %s <-c|--config> <config file name>.json", os.Args[0]))
 }
 
-func getOptions() mqCfg {
-	var cfg mqCfg
+func getOptions() runtimeCfg {
+	var cfg runtimeCfg
 
 	switch n := len(os.Args); n {
 	case 2:

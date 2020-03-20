@@ -115,7 +115,7 @@ func getConsumer(brokers []string, topic string) kafka.PartitionConsumer {
 	common.Logger.Debugf("Create consumer for topic %s with parition %d", topic, partition)
 	consumer, err := master.ConsumePartition(topic, partition, kafka.OffsetNewest)
 	if err != nil {
-		common.ErrExit(fmt.Sprintf("Fail to create consumer for topic %s with partition %d: %s", common.MQCfg.Topic, partition, err.Error()))
+		common.ErrExit(fmt.Sprintf("Fail to create consumer for topic %s with partition %d: %s", common.RuntimeCfg.Topic, partition, err.Error()))
 	}
 
 	return consumer
@@ -149,8 +149,8 @@ func GetRecords(brokers []string, topic string) (<-chan *FlowRecord, <-chan *kaf
 					return
 				}
 				// default:
-				//   common.Logger.Infof("No record is gotten within %d seconds, sleep and retry", common.MQCfg.Timeout)
-				//   time.Sleep(time.Duration(common.MQCfg.Timeout) * time.Second)
+				//   common.Logger.Infof("No record is gotten within %d seconds, sleep and retry", common.RuntimeCfg.Timeout)
+				//   time.Sleep(time.Duration(common.RuntimeCfg.Timeout) * time.Second)
 			}
 		}
 	}()

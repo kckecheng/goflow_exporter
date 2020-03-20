@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	cfg := common.MQCfg
+	cfg := common.RuntimeCfg
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGTERM, syscall.SIGHUP)
@@ -26,7 +26,7 @@ func main() {
 			case <-sc:
 				common.ErrExit("Terminate the execution")
 			case <-ticker.C:
-				common.Logger.Debugf("Reset previous metric values after expiration(%d seconds)", cfg.Timeout)
+				common.Round++
 				metric.Reset()
 			}
 		}
