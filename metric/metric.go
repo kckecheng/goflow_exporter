@@ -31,6 +31,14 @@ func init() {
 	prometheus.MustRegister(sflowMetric)
 }
 
+// UpdateCollectionRound update the round of collections
+func UpdateCollectionRound() {
+	common.Round++
+
+	common.Logger.Debugf("Round of collection: %d", common.Round)
+	sflowRound.Set(float64(common.Round))
+}
+
 // UpdateMetric update metric
 func UpdateMetric(r *message.FlowRecord) {
 	common.Logger.Debugf("Update metric with sflow record: %+v", r)
@@ -51,9 +59,6 @@ func UpdateMetric(r *message.FlowRecord) {
 
 // Reset clear previous metric instance values
 func Reset() {
-	common.Logger.Debugf("Round of collection: %d", common.Round)
-	sflowRound.Set(float64(common.Round))
-
 	common.Logger.Debugf("Reset previous metric values after expiration(%d seconds)", common.RuntimeCfg.Timeout)
 	sflowMetric.Reset()
 }

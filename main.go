@@ -26,8 +26,8 @@ func main() {
 			case <-sc:
 				common.ErrExit("Terminate the execution")
 			case <-ticker.C:
-				common.Round++
 				metric.Reset()
+				metric.UpdateCollectionRound()
 			}
 		}
 	}()
